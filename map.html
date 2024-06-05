@@ -1,0 +1,101 @@
+<html>
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.css" />
+    <style>
+        #map { height: 400px; }
+    </style>
+</head>
+<body style="background-color: #b0d4ee;">
+    <h1>Nearby Hospitals and Pharmacies</h1>
+        <form id="form1">
+        <label for="location">Enter Your Location:</label>
+        <input type="text" id="location" name="location" required>
+        <button type="submit">Search</button><br><br>
+    </form>
+    <div id="map"></div>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script>
+        var map;
+
+        function initMap() {
+            map = L.map('map').setView([20.5937, 78.9629], 5);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+        }
+
+        document.getElementById("form1").addEventListener("submit", function(event) {
+            event.preventDefault();
+            var location = document.getElementById("location").value;
+            geocodeLocation(location);
+        });
+
+        function geocodeLocation(location) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "https://nominatim.openstreetmap.org/search?format=json&q=" + encodeURIComponent(location), true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data && data.length > 0) {
+                        var coordinates = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+                        if (!isNaN(coordinates[0]) && !isNaN(coordinates[1])) {
+                            map.setView(coordinates, 12);
+                            fetchNearbyPlaces(coordinates);
+                        } else {
+                            alert("Invalid location. Please try again.");
+                        }
+                    } else {
+                        alert("Location not found. Please try again.");
+                    }
+                }
+            };
+            xhr.send();
+        }
+
+        function fetchNearbyPlaces(coordinates) {
+            var overpassUrl = "https://overpass-api.de/api/interpreter";
+            var query = `[out:json];
+                (
+                    node["amenity"="hospital"](around:5000,${coordinates[0]},${coordinates[1]});
+                    node["amenity"="pharmacy"](around:5000,${coordinates[0]},${coordinates[1]});
+                );
+                out;`;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open("POST", overpassUrl, true);
+            xhr.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4 && xhr.status == 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    processNearbyPlaces(response.elements);
+                }
+            };
+            xhr.send("data=" + encodeURIComponent(query));
+        }
+
+        function processNearbyPlaces(places) {
+            for (var i = 0; i < places.length; i++) {
+                var place = places[i];
+                var lat = place.lat;
+                var lon = place.lon;
+                var name = place.tags.name || "Unnamed Place";
+                var amenity = place.tags.amenity;
+
+                L.marker([lat, lon], {icon: smallIcon}).addTo(map)
+                    .bindPopup(`<b>${name}</b><br>${amenity}`)
+                    .openPopup();
+            }
+        }
+
+        var smallIcon = L.icon({
+            iconUrl: 'icon.png',
+            iconSize: [20, 22],
+            iconAnchor: [12, 41], 
+            popupAnchor: [1, -34] 
+        });
+
+        window.onload = initMap;
+    </script>
+</body>
+</html>
