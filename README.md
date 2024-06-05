@@ -63,11 +63,18 @@ HEALHIVE (hospital management system) is designed to provide a seamless experien
 
 
 **TECHNIQUES AND TOOLS USED:**
+
 •	HTML
+
 •	CSS
+
 •	JavaScript
+
 •	Server-side scripting with Php
+
 •	Database Management with MySQL
+
 •	Form Handling
+
 •	Session Management.
 
